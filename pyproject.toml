@@ -1,0 +1,116 @@
+[project]
+name = "arcstack-django-api"
+version = "0.1.0"
+description = "Yet another API for Django"
+authors = [
+    {name = "Gokhan Ozturk",email = "me@gokhan.org.tr"}
+]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.10"
+keywords = ["api", "django", "rest", "framework", "api-framework", "class-based-views"]
+dependencies = [
+    "django (>=3.1,<6.0.0)",
+    "pydantic (>=2.10.6,<3.0.0)",
+    "django-appconf (>=1.1.0,<2.0.0)"
+]
+classifiers = [
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: System Administrators",
+    "Operating System :: OS Independent",
+    "Development Status :: 3 - Alpha",
+    "Topic :: Internet",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development",
+    "Typing :: Typed",
+    "Environment :: Web Environment",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3 :: Only",
+    "Framework :: Django",
+    "Framework :: Django :: 3.1",
+    "Framework :: Django :: 3.2",
+    "Framework :: Django :: 4.1",
+    "Framework :: Django :: 4.2",
+    "Framework :: Django :: 5.0",
+    "Framework :: Django :: 5.1",
+    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
+    "Topic :: Internet :: WWW/HTTP",
+]
+
+
+[project.urls]
+homepage = "https://github.com/arcstack/arcstack-django-api"
+repository = "https://github.com/arcstack/arcstack-django-api"
+"Bug Tracker" = "https://github.com/arcstack/arcstack-django-api/issues"
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.4"
+ruff = "^0.9.6"
+
+[tool.ruff]
+line-length = 88
+indent-width = 4
+fix = true
+include = ["pyproject.toml", "arcstack_api/**/*.py"]
+
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "B",    # flake8-bugbear
+    "C",    # flake8-comprehensions
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "FURB", # refurb
+    "I",    # isort
+    "PTH",  # flake8-use-pathlib
+    "UP",   # pyupgrade
+    "W",    # pycodestyle warnings
+]
+ignore = [
+    "E501", # line too long, handled by black
+    "B008", # do not perform function calls in argument defaults
+    "C901", # too complex
+]
+
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"
+
+# Enable auto-formatting of code examples in docstrings. Markdown,
+# reStructuredText code/literal blocks and doctests are all supported.
+#
+# This is currently disabled by default, but it is planned for this
+# to be opt-out in the future.
+docstring-code-format = true
+
+# Set the line length limit used when formatting code snippets in
+# docstrings.
+#
+# This only has an effect when the `docstring-code-format` setting is
+# enabled.
+docstring-code-line-length = "dynamic"
+
+[tool.ruff.lint.isort]
+lines-after-imports = 2
