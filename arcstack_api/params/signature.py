@@ -38,7 +38,7 @@ class MethodSignature:
         self.params = []
 
         return_annotation = self.signature.return_annotation
-        if return_annotation is not inspect.Parameter.empty and isinstance(
+        if return_annotation is not inspect.Parameter.empty and issubclass(
             return_annotation, pydantic.BaseModel
         ):
             self.return_annotation = return_annotation
