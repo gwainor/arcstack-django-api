@@ -58,11 +58,14 @@ class ArcStackAPI:
 
             self.setup(request, response, *args, **kwargs)
 
-            if self.request is None:
-                raise AttributeError(
-                    f'{cls.__name__} instance has no "request" attribute. Did you override '
-                    'setup() and forget to call super()?'
-                )
+            if not hasattr(self, 'request'):
+                if settings.DEBUG:
+                    raise AttributeError(
+                        f'`{cls.__name__}` instance has no `request` attribute. '
+                        'Did you override `setup()` and forget to call `super()`?'
+                    )
+                else:
+                    return InternalServerErrorResponse()
 
             return self.dispatch(response)
 
