@@ -103,7 +103,7 @@ class ArcStackAPI:
 
     def dispatch(self, response: ArcStackResponse):
         try:
-            if self.http_method not in self.__signature__.methods:
+            if not hasattr(self, self.http_method):
                 raise HttpMethodNotAllowedError()
 
             method_kwargs = self._build_method_kwargs()
@@ -143,6 +143,7 @@ class ArcStackAPI:
         if result is None:
             return None
 
+        # TODO: `str`, `int` and `list` should be accepted as well
         if self.http_method in ['head', 'trace', 'connect']:
             raise ValueError(
                 f'`{self.__class__.__name__}.{self.http_method}` '
