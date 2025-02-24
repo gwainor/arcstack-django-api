@@ -1,3 +1,5 @@
+"""Tests the endpoints without pydantic models."""
+
 import json
 
 import pytest
@@ -47,6 +49,7 @@ class Simple(ArcStackAPI):
 urlpatterns = [
     path('api', Simple.as_endpoint()),
     path('api/error', Simple.as_endpoint(should_raise=True)),
+    path('api/login-required', Simple.as_endpoint(LOGIN_REQUIRED=True)),
 ]
 
 
@@ -87,3 +90,9 @@ def test_simple_error(client_method, expect_response, method_name):
     response = client_method(method_name, '/api/error', **client_kwargs)
     expect_response(response, status=400)
     assert response.json() == {'error': expected_response_text}
+
+
+@override_settings(ROOT_URLCONF=__name__)
+def test_login_required(client_method, expect_response):
+    response = client_method('get', '/api/login-required')
+    expect_response(response, status=401)
