@@ -51,7 +51,7 @@ class ArcStackAPI:
         def endpoint(request, *args, **kwargs):
             self = cls(signature, **initkwargs)
 
-            if cls.LOGIN_REQUIRED and not request.user.is_authenticated:
+            if self.LOGIN_REQUIRED and not request.user.is_authenticated:
                 return UnauthorizedResponse()
 
             response = ArcStackResponse({})
