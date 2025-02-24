@@ -6,7 +6,7 @@ from typing import Annotated, Any, get_args, get_origin
 import pydantic
 from django.http import HttpRequest
 
-from ..constants import ALLOWED_HTTP_METHODS
+from ..constants import ALLOWED_HTTP_METHOD_NAMES
 from ..errors import ValidationError
 from .models import Param
 from .utils import get_typed_signature
@@ -30,7 +30,7 @@ class MethodSignature:
     name: str
     signature: inspect.Signature
     params: list[MethodParam]
-    response_schema: pydantic.BaseModel | None = None
+    return_annotation: pydantic.BaseModel | None = None
 
     def __init__(self, name: str, method: Callable[..., Any]) -> None:
         self.name = name
@@ -41,7 +41,7 @@ class MethodSignature:
         if return_annotation is not inspect.Parameter.empty and isinstance(
             return_annotation, pydantic.BaseModel
         ):
-            self.response_schema = return_annotation
+            self.return_annotation = return_annotation
 
         for name, arg in self.signature.parameters.items():
             if name == 'self':
@@ -98,6 +98,6 @@ class EndpointSignature:
         self.endpoint = endpoint
         self.methods = {
             method: MethodSignature(method, getattr(endpoint, method))
-            for method in ALLOWED_HTTP_METHODS
+            for method in ALLOWED_HTTP_METHOD_NAMES
             if hasattr(endpoint, method)
         }

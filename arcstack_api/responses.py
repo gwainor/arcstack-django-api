@@ -1,6 +1,7 @@
 import pydantic
 from django.http import JsonResponse
 
+from .conf import settings
 from .encoders import ArcStackJSONEncoder
 
 
@@ -25,22 +26,16 @@ class ArcStackResponse(JsonResponse):
         )
 
 
-class HttpMethodNotAllowedResponse(ArcStackResponse):
-    status_code = 405
+class ErrorResponse(ArcStackResponse):
+    def __init__(self, errors: list[pydantic.ValidationError] | str, status: int = 400):
+        super().__init__({'error': errors}, status=status)
 
+
+class InternalServerErrorResponse(ArcStackResponse):
     def __init__(self):
-        super().__init__({'error': 'Method not allowed'})
-
-
-class ValidationErrorResponse(ArcStackResponse):
-    status_code = 400
-
-    def __init__(self, errors: list[pydantic.ValidationError] | str):
-        super().__init__({'error': errors})
+        super().__init__({'error': settings.API_ERROR_RESPONSE_TEXTS[500]}, status=500)
 
 
 class UnauthorizedResponse(ArcStackResponse):
-    status_code = 401
-
     def __init__(self):
-        super().__init__({'error': 'Unauthorized'})
+        super().__init__({'error': settings.API_ERROR_RESPONSE_TEXTS[401]}, status=401)
