@@ -61,13 +61,13 @@ class MethodSignature:
                 and isinstance(arg.default, type)
                 and issubclass(arg.default, pydantic.BaseModel)
             ):
-                raise ValueError(
+                raise TypeError(
                     f'Looks like you are using `{name}={arg.default.__name__}` '
                     f'instead of `{name}: {arg.default.__name__}` (annotation)'
                 )
 
             if get_origin(arg.annotation) is not Annotated:
-                raise ValueError(
+                raise TypeError(
                     f'Invalid annotation for parameter `{name}`: `{arg.annotation}`, '
                     'You need to use one of the `Param` types provided by the `arcstack_api`.'
                 )
