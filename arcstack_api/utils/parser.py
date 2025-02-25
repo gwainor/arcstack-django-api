@@ -13,7 +13,12 @@ class Parser:
         return cast(dict[str, Any], json.loads(request.body))
 
     @staticmethod
-    def parse_querydict(data: MultiValueDict, list_fields: list[str]) -> dict[str, Any]:
+    def parse_querydict(
+        data: MultiValueDict, list_fields: list[str] | None = None
+    ) -> dict[str, Any]:
+        if list_fields is None:
+            list_fields = []
+
         result: dict[str, Any] = {}
         for key in data.keys():
             if key in list_fields:
