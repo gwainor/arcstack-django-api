@@ -5,6 +5,7 @@ from arcstack_api import ArcStackAPI
 
 class Endpoint(ArcStackAPI):
     foo: str = None
+    foo1: int = None
     foo2: str
 
     def get(self):
@@ -13,7 +14,7 @@ class Endpoint(ArcStackAPI):
 
 def test_initkwargs_with_existing_attribute():
     # Should not raise an error
-    Endpoint.as_endpoint(foo='bar')
+    Endpoint.as_endpoint(foo='bar', foo1=1)
 
 
 def test_initkwargs_with_not_existing_attribute():

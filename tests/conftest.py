@@ -35,6 +35,10 @@ def client_method(client):
             if 'data' not in kwargs:
                 kwargs['data'] = json.dumps({})
 
+        if 'user' in kwargs:
+            client.force_login(kwargs['user'])
+            del kwargs['user']
+
         return method(*args, **kwargs)
 
     return wrapper
