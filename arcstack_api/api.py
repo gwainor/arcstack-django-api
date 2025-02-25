@@ -8,7 +8,7 @@ from django.utils.decorators import classonlymethod
 from .conf import settings
 from .constants import ALLOWED_HTTP_METHOD_NAMES, INVALID_INIT_KWARG_NAMES
 from .encoders import ArcStackJSONEncoder
-from .errors import HttpError, HttpMethodNotAllowedError
+from .errors import HttpError, HttpMethodNotAllowedError, ReturnValidationError
 from .params.signature import EndpointSignature
 from .responses import (
     ArcStackResponse,
@@ -34,9 +34,7 @@ class ArcStackAPI:
     kwargs: dict
     __signature__: EndpointSignature
 
-    def __init__(self, signature: EndpointSignature, **kwargs):
-        self.__signature__ = signature
-
+    def __init__(self, **kwargs):
         # Go through keyword arguments, and either save their values to our
         # instance, or raise an error.
         for key, value in kwargs.items():
@@ -49,7 +47,8 @@ class ArcStackAPI:
         signature = EndpointSignature(cls)
 
         def endpoint(request, *args, **kwargs):
-            self = cls(signature, **initkwargs)
+            self = cls(**initkwargs)
+            self.__signature__ = signature
 
             if self.LOGIN_REQUIRED and not request.user.is_authenticated:
                 return UnauthorizedResponse()
@@ -109,13 +108,18 @@ class ArcStackAPI:
             method_kwargs = self._build_method_kwargs()
 
             endpoint_func = getattr(self, self.http_method)
-            result = endpoint_func(**method_kwargs)
 
-            result = self._process_result(result)
+            result = self._process_result(endpoint_func(**method_kwargs))
 
             response.content = json.dumps(result, cls=ArcStackJSONEncoder)
         except HttpError as e:
             response = ErrorResponse(str(e), status=e.status_code)
+        except ReturnValidationError as e:
+            if settings.DEBUG:
+                # If we're in debug mode, we want to see the full traceback
+                raise e
+            else:
+                response = InternalServerErrorResponse()
         except Exception as e:
             if settings.DEBUG:
                 # If we're in debug mode, we want to see the full traceback
@@ -156,7 +160,10 @@ class ArcStackAPI:
             )
 
         if self._method_signature.return_annotation:
-            result = self._method_signature.return_annotation.model_validate(result)
+            try:
+                result = self._method_signature.return_annotation.model_validate(result)
+            except pydantic.ValidationError as e:
+                raise ReturnValidationError() from e
 
         if isinstance(result, pydantic.BaseModel):
             result = result.model_dump()

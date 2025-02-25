@@ -26,6 +26,15 @@ class ValidationError(HttpError):
         super().__init__(self.errors)
 
 
+class ReturnValidationError(ArcStackError):
+    """
+    Return Validation Error means the result value of the endpoint caused validation
+    errors from pydantic and it should be considered as an internal server error.
+    """
+
+    pass
+
+
 class APIError(HttpError):
     status_code = 400
 
