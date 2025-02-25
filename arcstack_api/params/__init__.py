@@ -15,15 +15,15 @@ class ParamShortcut:
         self._base_func = base_func
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
-        return self._base_func(*args, **kwargs)
+        return self._base_func(*args, **kwargs)  # pragma: no cover
 
     def __getitem__(self, args: Any) -> Any:
         if isinstance(args, tuple):
-            return Annotated[args[0], self._base_func(**args[1])]
+            return Annotated[args[0], self._base_func(**args[1])]  # pragma: no cover
         return Annotated[args, self._base_func()]
 
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     T = TypeVar('T')
     Query = Annotated[T, QueryModel()]
     Path = Annotated[T, PathModel()]

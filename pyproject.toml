@@ -117,3 +117,13 @@ docstring-code-line-length = "dynamic"
 
 [tool.ruff.lint.isort]
 lines-after-imports = 2
+
+[tool.coverage.report]
+exclude_also = [
+    # 1. Exclude an except clause of a specific form:
+    'except ValueError:\n\s*assume\(False\)',
+    # 2. Comments to turn coverage on and off:
+    'no cover: start(?s:.)*?no cover: stop',
+    # 3. A pragma comment that excludes an entire file:
+    '\A(?s:.*# pragma: exclude file.*)\Z',
+]

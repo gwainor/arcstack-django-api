@@ -16,7 +16,7 @@ class Param(BaseModel, ABC):
     @classmethod
     @abstractmethod
     def get_request_data(cls, request: HttpRequest, path: dict[str, Any]) -> TModel:
-        pass
+        pass  # pragma: no cover
 
 
 class QueryModel(Param):

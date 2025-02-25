@@ -1,3 +1,4 @@
+# pragma: exclude file
 from django.apps import AppConfig
 
 
