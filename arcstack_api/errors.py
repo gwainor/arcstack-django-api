@@ -1,46 +1,30 @@
-import pydantic
+class APIError(Exception):
+    """Represents errors that should be returned as a response.
 
-from .conf import settings
-
-
-# isort: off
-
-
-class ArcStackError(Exception):
-    """Base class for all ArcStack API errors."""
-
-    pass
-
-
-class HttpError(ArcStackError):
-    """HttpError means an error raised and should be sent as a HTTP response"""
-
-    status_code: int = 400
-
-
-class ValidationError(HttpError):
-    status_code = 400
-
-    def __init__(self, errors: list[pydantic.ValidationError]):
-        self.errors = errors
-        super().__init__(self.errors)
-
-
-class ReturnValidationError(ArcStackError):
-    """
-    Return Validation Error means the result value of the endpoint caused validation
-    errors from pydantic and it should be considered as an internal server error.
+    Classes that inherit from this class should modify the `status_code`
+    and `message` attributes.
     """
 
-    pass
+    def __init__(self, message: str, status_code: int = 400):
+        self.message = message
+        self.status_code = status_code
+
+    def __str__(self):
+        return f'{self.status_code} {self.message}'
 
 
-class APIError(HttpError):
-    status_code = 400
-
-
-class HttpMethodNotAllowedError(HttpError):
-    status_code = 405
+class InternalServerError(Exception):
+    """Represents errors that should be returned as a 500 response."""
 
     def __init__(self):
-        super().__init__(settings.API_ERROR_RESPONSE_TEXTS[405])
+        super().__init__('Internal server error')
+        self.status_code = 500
+
+
+class ValidationError(Exception):
+    """Validation errors occurs when processing the input data such as query
+    parameters, path parameters, headers, cookies, request body, etc.
+    """
+
+    def __init__(self, message: str):
+        super().__init__(message)

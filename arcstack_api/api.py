@@ -1,199 +1,184 @@
-import json
-from io import BytesIO
+from collections.abc import Callable
+from functools import wraps
+from typing import Annotated
 
-import pydantic
-from django.http import HttpRequest
-from django.utils.decorators import classonlymethod
+from django.core.exceptions import ImproperlyConfigured, MiddlewareNotUsed
+from django.http import HttpRequest, HttpResponse
+from django.utils.module_loading import import_string
+from typing_extensions import Doc
 
 from .conf import settings
-from .constants import ALLOWED_HTTP_METHOD_NAMES, INVALID_INIT_KWARG_NAMES
-from .encoders import ArcStackJSONEncoder
-from .errors import HttpError, HttpMethodNotAllowedError, ReturnValidationError
-from .params.signature import EndpointSignature
-from .responses import (
-    ArcStackResponse,
-    ErrorResponse,
-    InternalServerErrorResponse,
-    UnauthorizedResponse,
-)
-from .utils import is_accepted_pydantic_type
-
-
-# isort: off
+from .errors import ValidationError
+from .logger import logger
+from .responses import InternalServerErrorResponse
+from .serializers import JsonSerializer
+from .signature import EndpointSignature
 
 
 class ArcStackAPI:
-    CSRF_EXEMPT = settings.API_DEFAULT_CSRF_EXEMPT
-    LOGIN_REQUIRED = settings.API_DEFAULT_LOGIN_REQUIRED
+    _param_middleware: Annotated[
+        list[Callable],
+        Doc(
+            """
+            Middleware that will be called to build the endpoint kwargs.
+            Should accept the following arguments:
+            - request: The request object.
+            - signature: The signature of the endpoint.
+            - callback_args: The arguments of the callback.
+            - callback_kwargs: The keyword arguments of the callback.
+            Should return a tuple of (kwargs, response).
+            - kwargs: The keyword arguments to pass to the endpoint. Must be a
+              dictionary. `None` can be returned if there is nothing to add.
+            - response: The response to return. If the response is not None,
+              the execution will be terminated because there is probably a
+              validation error.
+            """
+        ),
+    ] = []
 
-    # Internal attributes
-    # These cannot be used as init keyword arguments in `as_endpoint`
-    http_method: str
-    request: HttpRequest
-    args: tuple
-    kwargs: dict
-    __signature__: EndpointSignature
+    _exception_middleware: Annotated[
+        list[Callable],
+        Doc(
+            """
+            Middleware that will be called to process the exception.
+            Should accept the following arguments:
+            - exception: The exception to process.
+            - request: The request object.
+            Should return a response.
+            """
+        ),
+    ] = []
 
-    def __init__(self, **kwargs):
-        # Go through keyword arguments, and either save their values to our
-        # instance, or raise an error.
-        for key, value in kwargs.items():
-            setattr(self, key, value)
+    _middleware_chain: Annotated[
+        Callable,
+        Doc(
+            """
+            The middleware chain.
+            """
+        ),
+    ] = None
 
-    @classonlymethod
-    def as_endpoint(cls, **initkwargs):
-        cls._check_initkwargs(cls, initkwargs)
+    def __init__(self):
+        self.load_middleware()
 
-        signature = EndpointSignature(cls)
+    def load_middleware(self):
+        self._param_middleware = []
+        self._exception_middleware = []
+        handler = self._get_response
+        for middleware_path in reversed(settings.API_MIDDLEWARE):
+            middleware = import_string(middleware_path)
 
-        def endpoint(request, *args, **kwargs):
-            self = cls(**initkwargs)
-            self.__signature__ = signature
-
-            if self.LOGIN_REQUIRED and not request.user.is_authenticated:
-                return UnauthorizedResponse()
-
-            response = ArcStackResponse({})
-
-            self.setup(request, response, *args, **kwargs)
-
-            if not hasattr(self, 'request'):
+            try:
+                mw_instance = middleware(handler)
+            except MiddlewareNotUsed as e:
                 if settings.DEBUG:
-                    raise AttributeError(
-                        f'`{cls.__name__}` instance has no `request` attribute. '
-                        'Did you override `setup()` and forget to call `super()`?'
-                    )
-                else:
-                    return InternalServerErrorResponse()
+                    if str(e):
+                        logger.debug(f'MiddlewareNotUsed({middleware_path}): {e}')
+                    else:
+                        logger.debug(f'MiddlewareNotUsed({middleware_path})')
+                continue
+            else:
+                handler = mw_instance
 
-            return self.dispatch(response)
-
-        endpoint.endpoint_class = cls
-        endpoint.signature = signature
-
-        # __name__ and __qualname__ are intentionally left unchanged as
-        # endpoint_class should be used to robustly determine the name of the endpoint
-        # instead.
-        endpoint.__doc__ = cls.__doc__
-        endpoint.__module__ = cls.__module__
-
-        # Add csrf_exempt if the endpoint is csrf_exempt
-        if cls.CSRF_EXEMPT:
-            endpoint.__dict__.update({'csrf_exempt': True})
-
-        return endpoint
-
-    def setup(self, request: HttpRequest, response: ArcStackResponse, *args, **kwargs):
-        self.request = request
-        self.response = response
-        self.args = args
-        self.kwargs = kwargs
-
-        self.http_method = self.request.method.lower()
-
-        if self.http_method in ['post', 'put', 'patch']:
-            if self.request.content_type == 'multipart/form-data':
-                self.data, self.files = self.request.parse_file_upload(
-                    self.request.META, BytesIO(self.request.body)
+            if mw_instance is None:
+                raise ImproperlyConfigured(
+                    f'Middleware factory {middleware_path} returned None.'
                 )
-                self.data = self.data.dict()
-            else:
-                self.data = json.loads(self.request.body)
 
-    def dispatch(self, response: ArcStackResponse):
-        try:
-            if not hasattr(self, self.http_method):
-                raise HttpMethodNotAllowedError()
+            if hasattr(mw_instance, 'process_params'):
+                self._param_middleware.insert(0, mw_instance.process_params)
+            if hasattr(mw_instance, 'process_exception'):
+                self._exception_middleware.append(mw_instance.process_exception)
 
-            method_kwargs = self._build_method_kwargs()
+        self._middleware_chain = handler
 
-            endpoint_func = getattr(self, self.http_method)
+    def __call__(self, endpoint):
+        @wraps(endpoint)
+        def wrapper(request, *args, **kwargs):
+            request.endpoint = endpoint
+            request.signature = EndpointSignature(endpoint)
+            return self.get_response(request, *args, **kwargs)
 
-            result = self._process_result(endpoint_func(**method_kwargs))
+        return wrapper
 
-            response.content = json.dumps(result, cls=ArcStackJSONEncoder)
-        except HttpError as e:
-            response = ErrorResponse(str(e), status=e.status_code)
-        except ReturnValidationError as e:
-            if settings.DEBUG:
-                # If we're in debug mode, we want to see the full traceback
-                raise e
-            else:
-                response = InternalServerErrorResponse()
-        except Exception as e:
-            if settings.DEBUG:
-                # If we're in debug mode, we want to see the full traceback
-                # Let the Django server handle it
-                raise e
-            else:
-                response = InternalServerErrorResponse()
+    def get_response(self, *args, **kwargs):
+        return self._middleware_chain(*args, **kwargs)
+
+    def _get_response(self, request, *args, **kwargs):
+        if not hasattr(request, 'endpoint'):
+            raise ImproperlyConfigured(
+                'The request object must have an `endpoint` attribute. '
+                'To endpointize a view, use the `api` decorator or '
+                'subclass `Endpoint`.'
+            )
+
+        response, endpoint_args, endpoint_kwargs = self._process_params(
+            request, *args, **kwargs
+        )
+
+        if response is None:
+            try:
+                response = request.endpoint(*endpoint_args, **endpoint_kwargs)
+            except Exception as e:
+                response = self._process_exception(e, request)
 
         return response
 
-    def _build_method_kwargs(self):
-        """Build kwargs for the endpoint
+    def _process_params(self, *args, **kwargs):
+        request = args[0]
+        response = None
 
-        This method can be overridden.
-
-        All requested arguments are extracted from the method signature using `inspect`.
-        The `request` is being validated against requested HTTP method arguments.
-        All arguments must be annotated with a pydantic model.
-        """
-        method_kwargs = self._method_signature.validate(self.request, self.kwargs)
-
-        return method_kwargs
-
-    def _process_result(self, result):
-        if result is None:
-            return None
-
-        # TODO: `str`, `int` and `list` should be accepted as well
-        if self.http_method in ['head', 'trace', 'connect']:
-            raise ValueError(
-                f'`{self.__class__.__name__}.{self.http_method}` '
-                'should not return a response body according to the HTTP spec.'
-            )
-        elif not is_accepted_pydantic_type(result):
-            raise ValueError(
-                f'`{self.__class__.__name__}.{self.http_method}` '
-                'should return a `dict`, a `pydantic.BaseModel`, or `None`.'
-            )
-
-        if self._method_signature.return_annotation:
+        validation_errors = []
+        for middleware in self._param_middleware:
             try:
-                result = self._method_signature.return_annotation.model_validate(result)
-            except pydantic.ValidationError as e:
-                raise ReturnValidationError() from e
+                args, kwargs = middleware(args, kwargs)
+            except ValidationError as e:
+                validation_errors.append(e)
+            except Exception as e:
+                response = self._process_exception(e, request)
 
-        if isinstance(result, pydantic.BaseModel):
-            result = result.model_dump()
+        if validation_errors:
+            response = HttpResponse(
+                content=JsonSerializer.serialize(
+                    {
+                        'errors': [str(e) for e in validation_errors],
+                    }
+                ),
+                status=400,
+            )
 
-        return result
+        return response, args, kwargs
 
-    @property
-    def _method_signature(self):
-        return self.__signature__.methods[self.http_method]
+    def _process_exception(
+        self, exception: Exception, request: HttpRequest
+    ) -> HttpResponse | None:
+        response = None
 
-    def _check_initkwargs(cls, initkwargs):
-        """Check the initkwargs for the endpoint
+        for middleware in self._exception_middleware:
+            try:
+                response = middleware(exception, request)
+                if response is not None:
+                    break
+            except Exception as e:
+                # Another exception occurred in the exception middleware.
+                # Let it propagate.
+                response = self._process_unhandled_exception(e)
 
-        This method can be overridden.
-        """
-        for key in initkwargs:
-            if key in INVALID_INIT_KWARG_NAMES:
-                raise TypeError(
-                    f'The "{key}" keyword argument is reserved for internal use and '
-                    'cannot be used as a keyword argument in API endpoints in '
-                    f'`{cls.__name__}.as_endpoint()`.'
-                )
-            if key in ALLOWED_HTTP_METHOD_NAMES:
-                raise TypeError(
-                    f'The method name "{key}" is not accepted as a keyword argument '
-                    f'to `{cls.__name__}.as_endpoint()`.'
-                )
-            if not hasattr(cls, key):
-                raise TypeError(
-                    f'`{cls.__name__}.as_endpoint()` received an invalid keyword "{key}". '
-                    '`as_endpoint()` only accepts arguments that are already '
-                    'attributes of the class.'
-                )
+        # No response means no middleware handled the exception. There is a built-in
+        # (`CommonMiddleware`) middleware that handles the API errors but it seems
+        # it is ommitted from the middleware chain.
+        # Let's hope the developer knows what they are doing.
+        if response is None:
+            response = self._process_unhandled_exception(exception)
+
+        return response
+
+    def _process_unhandled_exception(self, exception: Exception):
+        if settings.DEBUG:
+            raise exception
+        else:
+            logger.error(f'Unhandled exception: {exception}')
+            return InternalServerErrorResponse()
+
+
+api = ArcStackAPI()

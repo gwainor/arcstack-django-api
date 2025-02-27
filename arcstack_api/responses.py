@@ -1,41 +1,18 @@
-import pydantic
-from django.http import JsonResponse
+from django.http import HttpResponse
+from django.http import JsonResponse as DjangoJsonResponse
 
-from .conf import settings
-from .encoders import ArcStackJSONEncoder
-
-
-# isort: off
+from .serializers import JsonSerializer
 
 
-class ArcStackResponse(JsonResponse):
-    def __init__(
-        self,
-        data,
-        encoder=ArcStackJSONEncoder,
-        safe=True,
-        json_dumps_params=None,
-        **kwargs,
-    ):
+class JsonResponse(DjangoJsonResponse):
+    def __init__(self, data, status=200):
         super().__init__(
             data,
-            encoder=encoder,
-            safe=safe,
-            json_dumps_params=json_dumps_params,
-            **kwargs,
+            status=status,
+            encoder=JsonSerializer._get_default_encoder(),
         )
 
 
-class ErrorResponse(ArcStackResponse):
-    def __init__(self, errors: list[pydantic.ValidationError] | str, status: int = 400):
-        super().__init__({'error': errors}, status=status)
-
-
-class InternalServerErrorResponse(ArcStackResponse):
+class InternalServerErrorResponse(HttpResponse):
     def __init__(self):
-        super().__init__({'error': settings.API_ERROR_RESPONSE_TEXTS[500]}, status=500)
-
-
-class UnauthorizedResponse(ArcStackResponse):
-    def __init__(self):
-        super().__init__({'error': settings.API_ERROR_RESPONSE_TEXTS[401]}, status=401)
+        super().__init__(content=b'Internal server error', status=500)

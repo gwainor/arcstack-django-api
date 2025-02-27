@@ -118,6 +118,12 @@ docstring-code-line-length = "dynamic"
 [tool.ruff.lint.isort]
 lines-after-imports = 2
 
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests",
+]
+
 [tool.coverage.report]
 exclude_also = [
     # 1. Exclude an except clause of a specific form:

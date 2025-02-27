@@ -21,6 +21,17 @@ django.setup()
 
 
 @pytest.fixture
+def set_middleware(settings):
+    def wrapper(middleware_list):
+        from arcstack_api import api
+
+        settings.API_MIDDLEWARE = middleware_list
+        api.load_middleware()
+
+    return wrapper
+
+
+@pytest.fixture
 def client():
     return Client()
 
@@ -34,6 +45,8 @@ def client_method(client):
             kwargs['content_type'] = 'application/json'
             if 'data' not in kwargs:
                 kwargs['data'] = json.dumps({})
+            elif isinstance(kwargs['data'], dict):
+                kwargs['data'] = json.dumps(kwargs['data'])
 
         if 'user' in kwargs:
             client.force_login(kwargs['user'])
@@ -46,14 +59,13 @@ def client_method(client):
 
 @pytest.fixture
 def expect_response():
-    def wrapper(
-        response: HttpResponse,
-        status: int = 200,
-        content_type: str = 'application/json',
-    ):
+    def wrapper(response: HttpResponse, status: int = 200, **kwargs):
         try:
             assert response.status_code == status
-            assert response.headers['Content-Type'] == content_type
+            if 'content_type' in kwargs:
+                assert response.headers['Content-Type'] == kwargs['content_type']
+            if 'content' in kwargs:
+                assert response.content == kwargs['content']
         except AssertionError:
             # Useful for debugging
             print(response.content)
