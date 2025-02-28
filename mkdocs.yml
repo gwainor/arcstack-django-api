@@ -5,7 +5,7 @@ repo_url: https://github.com/gwainor/arcstack-django-api
 extra:
   analytics:
     provider: google
-    id: G-VQK6NJJKFW
+    property: G-VQK6NJJKFW
 extra_css:
   - stylesheets/extra.css
 theme:
