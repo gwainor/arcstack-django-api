@@ -45,9 +45,10 @@ classifiers = [
 
 
 [project.urls]
-homepage = "https://github.com/arcstack/arcstack-django-api"
-repository = "https://github.com/arcstack/arcstack-django-api"
-"Bug Tracker" = "https://github.com/arcstack/arcstack-django-api/issues"
+homepage = "https://gwainor.github.io/arcstack-django-api/"
+repository = "https://github.com/gwainor/arcstack-django-api"
+documentation = "https://gwainor.github.io/arcstack-django-api/"
+"Bug Tracker" = "https://github.com/gwainor/arcstack-django-api/issues"
 
 
 [build-system]
