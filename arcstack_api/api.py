@@ -92,17 +92,24 @@ class ArcStackAPI:
 
         self._middleware_chain = handler
 
-    def __call__(self, endpoint):
+    def __call__(self, endpoint: Callable):
+        wrapper = self._create_wrapper(endpoint)
+        return wrapper
+
+    def _create_wrapper(self, endpoint: Callable):
         @wraps(endpoint)
         def wrapper(request, *args, **kwargs):
             request.endpoint = endpoint
             request.signature = EndpointSignature(endpoint)
-            return self.get_response(request, *args, **kwargs)
+
+            try:
+                response = self._middleware_chain(request, *args, **kwargs)
+            except Exception as e:
+                response = self._process_exception(e, request)
+
+            return response
 
         return wrapper
-
-    def get_response(self, *args, **kwargs):
-        return self._middleware_chain(*args, **kwargs)
 
     def _get_response(self, request, *args, **kwargs):
         if not hasattr(request, 'endpoint'):
@@ -117,15 +124,12 @@ class ArcStackAPI:
         )
 
         if response is None:
-            try:
-                response = request.endpoint(*endpoint_args, **endpoint_kwargs)
-            except Exception as e:
-                response = self._process_exception(e, request)
+            response = request.endpoint(request, *endpoint_args, **endpoint_kwargs)
 
         return response
 
-    def _process_params(self, *args, **kwargs):
-        request = args[0]
+    def _process_params(self, request, *args, **kwargs):
+        """Process the parameters of the request through the middleware."""
         response = None
 
         validation_errors = []
@@ -152,6 +156,7 @@ class ArcStackAPI:
     def _process_exception(
         self, exception: Exception, request: HttpRequest
     ) -> HttpResponse | None:
+        """Process the exception through the middleware."""
         response = None
 
         for middleware in self._exception_middleware:
@@ -174,6 +179,7 @@ class ArcStackAPI:
         return response
 
     def _process_unhandled_exception(self, exception: Exception):
+        """Process the unhandled exception."""
         if settings.DEBUG:
             raise exception
         else:
@@ -181,4 +187,4 @@ class ArcStackAPI:
             return InternalServerErrorResponse()
 
 
-api = ArcStackAPI()
+arcstack_api = ArcStackAPI()

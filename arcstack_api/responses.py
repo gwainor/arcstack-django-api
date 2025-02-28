@@ -16,3 +16,27 @@ class JsonResponse(DjangoJsonResponse):
 class InternalServerErrorResponse(HttpResponse):
     def __init__(self):
         super().__init__(content=b'Internal server error', status=500)
+
+
+class MethodNotAllowedResponse(HttpResponse):
+    def __init__(self):
+        super().__init__(
+            content=b'Method not allowed',
+            status=405,
+        )
+
+
+class NotFoundResponse(HttpResponse):
+    def __init__(self):
+        super().__init__(
+            content=b'Not found',
+            status=404,
+        )
+
+
+class UnauthorizedResponse(HttpResponse):
+    def __init__(self):
+        super().__init__(
+            content=b'Unauthorized',
+            status=401,
+        )

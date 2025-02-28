@@ -2,9 +2,10 @@ import json
 from collections import namedtuple
 
 import pytest
+from django.contrib.auth.models import AnonymousUser
 from django.http import HttpResponse
 
-from arcstack_api import APIError, Endpoint, api
+from arcstack_api import APIError, Endpoint, api_endpoint, arcstack_api
 
 
 Case = namedtuple('Case', ['return_type', 'return_value', 'expected_content'])
@@ -24,12 +25,12 @@ RESPONSE_CASES = [
 def common_middleware(settings):
     old_middleware = settings.API_MIDDLEWARE
     settings.API_MIDDLEWARE = ['arcstack_api.middleware.common.CommonMiddleware']
-    api.load_middleware()
+    arcstack_api.load_middleware()
 
     yield
 
     settings.API_MIDDLEWARE = old_middleware
-    api.load_middleware()
+    arcstack_api.load_middleware()
 
 
 class TestCommonMiddlewareResponseTransform:
@@ -65,3 +66,60 @@ class TestCommonMiddlewareExceptionTransform:
         response_data = json.loads(response.content)
         assert response_data['error'] == 'Test error'
         assert response_data['status'] == 400
+
+
+@pytest.mark.django_db
+class TestCommonMiddlewareLoginRequired:
+    def test_with_global_setting(
+        self, settings, common_middleware, rf, expect_response, django_user_model
+    ):
+        settings.API_DEFAULT_LOGIN_REQUIRED = True
+
+        class ApiEndpoint(Endpoint):
+            def get(self, request):
+                return 'Hello, World!'
+
+        endpoint = ApiEndpoint.as_endpoint()
+        request = rf.get('/api/login-required')
+        request.user = AnonymousUser()
+        response = endpoint(request)
+        expect_response(response, status=401)
+
+        request.user = django_user_model.objects.create_user(username='testuser')
+        response = endpoint(request)
+        expect_response(response, status=200, content=b'Hello, World!')
+
+    def test_with_endpoint_setting(
+        self, common_middleware, rf, expect_response, django_user_model
+    ):
+        class ApiEndpoint(Endpoint):
+            LOGIN_REQUIRED = True
+
+            def get(self, request):
+                return 'Hello, World!'
+
+        endpoint = ApiEndpoint.as_endpoint()
+        request = rf.get('/api/login-required')
+        request.user = AnonymousUser()
+        response = endpoint(request)
+        expect_response(response, status=401)
+
+        request.user = django_user_model.objects.create_user(username='testuser')
+        response = endpoint(request)
+        expect_response(response, status=200, content=b'Hello, World!')
+
+    def test_with_decorator(
+        self, common_middleware, rf, expect_response, django_user_model
+    ):
+        @api_endpoint(login_required=True)
+        def endpoint(request):
+            return 'Hello, World!'
+
+        request = rf.get('/api/login-required')
+        request.user = AnonymousUser()
+        response = endpoint(request)
+        expect_response(response, status=401)
+
+        request.user = django_user_model.objects.create_user(username='testuser')
+        response = endpoint(request)
+        expect_response(response, status=200, content=b'Hello, World!')

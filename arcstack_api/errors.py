@@ -28,3 +28,11 @@ class ValidationError(Exception):
 
     def __init__(self, message: str):
         super().__init__(message)
+
+
+class UnauthorizedError(Exception):
+    """Represents errors that should be returned as a 401 response."""
+
+    def __init__(self):
+        super().__init__('Unauthorized')
+        self.status_code = 401

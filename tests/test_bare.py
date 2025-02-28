@@ -1,17 +1,17 @@
 import pytest
 from django.http import HttpResponse
 
-from arcstack_api import Endpoint, api
+from arcstack_api import Endpoint, api_endpoint, arcstack_api
 
 
 @pytest.fixture
 def empty_middleware(settings):
     old_middleware = settings.API_MIDDLEWARE
     settings.API_MIDDLEWARE = []
-    api.load_middleware()
+    arcstack_api.load_middleware()
     yield
     settings.API_MIDDLEWARE = old_middleware
-    api.load_middleware()
+    arcstack_api.load_middleware()
 
 
 class TestBareEndpoint:
@@ -31,7 +31,7 @@ class TestBareEndpoint:
         expect_response(response, status=200, content=b'Hello, world!')
 
     def test_function_based_endpoint(self, empty_middleware, rf, expect_response):
-        @api
+        @api_endpoint()
         def endpoint(*args, **kwargs):
             return HttpResponse(status=200, content=b'Hello, world!')
 
@@ -42,7 +42,7 @@ class TestBareEndpoint:
     def test_no_http_response(self, empty_middleware, rf):
         """This would fail on a regular Django flow because the view would return a string."""
 
-        @api
+        @api_endpoint()
         def endpoint(*args, **kwargs):
             return 'Hello, world!'
 
@@ -54,7 +54,7 @@ class TestBareEndpoint:
     def test_errored_endpoint_returns_500_in_production(
         self, empty_middleware, rf, expect_response
     ):
-        @api
+        @api_endpoint()
         def endpoint(*args, **kwargs):
             raise Exception('Test exception')
 
@@ -67,7 +67,7 @@ class TestBareEndpoint:
     ):
         settings.DEBUG = True
 
-        @api
+        @api_endpoint()
         def endpoint(*args, **kwargs):
             raise Exception('Test exception')
 

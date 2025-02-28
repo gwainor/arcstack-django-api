@@ -23,10 +23,10 @@ django.setup()
 @pytest.fixture
 def set_middleware(settings):
     def wrapper(middleware_list):
-        from arcstack_api import api
+        from arcstack_api import arcstack_api
 
         settings.API_MIDDLEWARE = middleware_list
-        api.load_middleware()
+        arcstack_api.load_middleware()
 
     return wrapper
 

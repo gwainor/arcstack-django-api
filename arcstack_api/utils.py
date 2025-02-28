@@ -1,9 +1,4 @@
-import json
+def is_class_based_endpoint(endpoint):
+    from .endpoint import Endpoint
 
-
-def is_json_serializable(obj):
-    try:
-        json.dumps(obj)
-    except TypeError:
-        return False
-    return True
+    return isinstance(endpoint, type) and issubclass(endpoint, Endpoint)
