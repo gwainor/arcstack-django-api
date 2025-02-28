@@ -18,13 +18,13 @@ jobs:
               with:
                 python-version: '3.10'
 
-            - name: Run image
+            - name: Setup Poetry
               uses: abatilo/actions-poetry@v3
               with:
                 poetry-version: latest
 
             - name: Install dependencies
-              run: poetry install
+              run: poetry install --without dev,test,docs
 
             - name: Setup PyPI Token
               run: poetry config pypi-token.pypi ${{ secrets.PYPI_TOKEN }}
