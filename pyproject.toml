@@ -72,6 +72,10 @@ pytest = "^8.3.4"
 pytest-django = "^4.10.0"
 pytest-cov = "^6.0.0"
 
+
+[tool.poetry.group.docs.dependencies]
+mkdocs-material = "^9.6.5"
+
 [tool.poetry.requires-plugins]
 poetry-dynamic-versioning = { version = ">=1.0.0,<2.0.0", extras = ["plugin"] }
 

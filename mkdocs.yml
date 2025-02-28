@@ -1,0 +1,26 @@
+site_name: ArcStack Django API
+site_url: https://gwainor.github.io/arcstack-django-api
+repo_name: gwainor/arcstack-django-api
+repo_url: https://github.com/gwainor/arcstack-django-api
+extra_css:
+  - stylesheets/extra.css
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme)"
+      primary: custom
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)" 
+      scheme: slate
+      primary: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
