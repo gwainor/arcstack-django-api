@@ -1,6 +1,6 @@
 # ArcStack Django API Framework
 
-> Yet Another Django API Framework
+[![Tests](https://github.com/gwainor/arcstack-django-api/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/gwainor/arcstack-django-api/actions/workflows/test.yml)
 
 This is a simple API framework for Django. It is designed to be simple and follow
 the Django way of doing things with class-based views.
