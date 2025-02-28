@@ -6,5 +6,6 @@ from .errors import APIError
 
 # isort: off
 
+__version__ = '0.0.0'
 
 __all__ = ['arcstack_api', 'Endpoint', 'APIError', 'api_endpoint']
