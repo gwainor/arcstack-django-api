@@ -56,7 +56,9 @@ build-backend = "poetry.core.masonry.api"
 
 
 [tool.poetry]
-include = ["arcstack_api/**/*.py"]
+packages = [
+    {include = "arcstack_api", from = "."}
+]
 exclude = ["tests", "docs"]
 
 
