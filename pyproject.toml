@@ -1,7 +1,7 @@
 [project]
 name = "arcstack-django-api"
-version = "0.1.0"
-description = "Yet another API for Django"
+dynamic = ["version"]
+description = "Create APIs in Django way"
 authors = [
     {name = "Gokhan Ozturk",email = "me@gokhan.org.tr"}
 ]
@@ -51,8 +51,8 @@ repository = "https://github.com/arcstack/arcstack-django-api"
 
 
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]
+build-backend = "poetry_dynamic_versioning.backend"
 
 
 [tool.poetry]
@@ -60,6 +60,7 @@ packages = [
     {include = "arcstack_api", from = "."}
 ]
 exclude = ["tests", "docs"]
+version = "0.0.0"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -70,6 +71,9 @@ django-stubs = "^5.1.3"
 pytest = "^8.3.4"
 pytest-django = "^4.10.0"
 pytest-cov = "^6.0.0"
+
+[tool.poetry.requires-plugins]
+poetry-dynamic-versioning = { version = ">=1.0.0,<2.0.0", extras = ["plugin"] }
 
 
 [tool.ruff]
@@ -144,3 +148,5 @@ exclude_also = [
     # 3. A pragma comment that excludes an entire file:
     '\A(?s:.*# pragma: exclude file.*)\Z',
 ]
+[tool.poetry-dynamic-versioning]
+enable = true
