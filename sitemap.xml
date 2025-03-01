@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+         <loc>https://gwainor.github.io/arcstack-django-api/</loc>
+         <lastmod>2025-03-01</lastmod>
+    </url>
+    <url>
+         <loc>https://gwainor.github.io/arcstack-django-api/motivation/</loc>
+         <lastmod>2025-03-01</lastmod>
+    </url>
+    <url>
+         <loc>https://gwainor.github.io/arcstack-django-api/roadmap/</loc>
+         <lastmod>2025-03-01</lastmod>
+    </url>
+    <url>
+         <loc>https://gwainor.github.io/arcstack-django-api/middleware/</loc>
+         <lastmod>2025-03-01</lastmod>
+    </url>
+    <url>
+         <loc>https://gwainor.github.io/arcstack-django-api/middleware/common/</loc>
+         <lastmod>2025-03-01</lastmod>
+    </url>
+</urlset>
