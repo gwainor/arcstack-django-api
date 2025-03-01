@@ -4,7 +4,7 @@ from appconf import AppConf
 
 
 class ArcStackAPIConf(AppConf):
-    MIDDLEWARE = ['arcstack_api.middleware.common.CommonMiddleware']
+    MIDDLEWARE = ['arcstack_api.middleware.CommonMiddleware']
 
     JSON_ENCODER = 'django.core.serializers.json.DjangoJSONEncoder'
 

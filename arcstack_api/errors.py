@@ -1,3 +1,8 @@
+# pragma: exclude file
+
+from typing import Any
+
+
 class APIError(Exception):
     """Represents errors that should be returned as a response.
 
@@ -5,7 +10,7 @@ class APIError(Exception):
     and `message` attributes.
     """
 
-    def __init__(self, message: str, status_code: int = 400):
+    def __init__(self, message: Any, status_code: int = 400):
         self.message = message
         self.status_code = status_code
 

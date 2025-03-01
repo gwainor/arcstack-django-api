@@ -1,4 +1,3 @@
-import json
 from collections import namedtuple
 
 import pytest
@@ -24,7 +23,7 @@ RESPONSE_CASES = [
 @pytest.fixture
 def common_middleware(settings):
     old_middleware = settings.API_MIDDLEWARE
-    settings.API_MIDDLEWARE = ['arcstack_api.middleware.common.CommonMiddleware']
+    settings.API_MIDDLEWARE = ['arcstack_api.middleware.CommonMiddleware']
     arcstack_api.load_middleware()
 
     yield
@@ -35,7 +34,7 @@ def common_middleware(settings):
 
 class TestCommonMiddlewareResponseTransform:
     @pytest.mark.parametrize('case', RESPONSE_CASES)
-    def test_responses(self, common_middleware, rf, case):
+    def test_responses(self, common_middleware, rf, case, expect_response):
         class ApiEndpoint(Endpoint):
             def get(self, request, return_type: str):
                 for case in RESPONSE_CASES:
@@ -47,8 +46,7 @@ class TestCommonMiddlewareResponseTransform:
         endpoint = ApiEndpoint.as_endpoint()
         request = rf.get(f'/api/{case.return_type}')
         response = endpoint(request, return_type=case.return_type)
-        assert response.status_code == 200
-        assert response.content == case.expected_content
+        expect_response(response, status=200, content=case.expected_content)
 
 
 class TestCommonMiddlewareExceptionTransform:
@@ -62,10 +60,9 @@ class TestCommonMiddlewareExceptionTransform:
         endpoint = ApiEndpoint.as_endpoint()
         request = rf.get('/api/exception')
         response = endpoint(request)
-        expect_response(response, status=400, content_type='application/json')
-        response_data = json.loads(response.content)
-        assert response_data['error'] == 'Test error'
-        assert response_data['status'] == 400
+        expect_response(
+            response, status=400, content_type='text/plain', content=b'Test error'
+        )
 
 
 @pytest.mark.django_db

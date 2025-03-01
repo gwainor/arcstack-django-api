@@ -8,30 +8,21 @@ from django.utils.module_loading import import_string
 from typing_extensions import Doc
 
 from .conf import settings
-from .errors import ValidationError
 from .logger import logger
+from .meta import ArcStackRequestMeta
 from .responses import InternalServerErrorResponse
-from .serializers import JsonSerializer
-from .signature import EndpointSignature
 
 
 class ArcStackAPI:
-    _param_middleware: Annotated[
+    _endpoint_middleware: Annotated[
         list[Callable],
         Doc(
             """
             Middleware that will be called to build the endpoint kwargs.
             Should accept the following arguments:
             - request: The request object.
-            - signature: The signature of the endpoint.
-            - callback_args: The arguments of the callback.
-            - callback_kwargs: The keyword arguments of the callback.
-            Should return a tuple of (kwargs, response).
-            - kwargs: The keyword arguments to pass to the endpoint. Must be a
-              dictionary. `None` can be returned if there is nothing to add.
-            - response: The response to return. If the response is not None,
-              the execution will be terminated because there is probably a
-              validation error.
+            - meta: The ArcStackRequestMeta object.
+            Should either return a new ArcStackRequestMeta object or None.
             """
         ),
     ] = []
@@ -62,7 +53,7 @@ class ArcStackAPI:
         self.load_middleware()
 
     def load_middleware(self):
-        self._param_middleware = []
+        self._endpoint_middleware = []
         self._exception_middleware = []
         handler = self._get_response
         for middleware_path in reversed(settings.API_MIDDLEWARE):
@@ -85,25 +76,22 @@ class ArcStackAPI:
                     f'Middleware factory {middleware_path} returned None.'
                 )
 
-            if hasattr(mw_instance, 'process_params'):
-                self._param_middleware.insert(0, mw_instance.process_params)
+            if hasattr(mw_instance, 'process_endpoint'):
+                self._endpoint_middleware.insert(0, mw_instance.process_endpoint)
             if hasattr(mw_instance, 'process_exception'):
                 self._exception_middleware.append(mw_instance.process_exception)
-
         self._middleware_chain = handler
 
     def __call__(self, endpoint: Callable):
-        wrapper = self._create_wrapper(endpoint)
-        return wrapper
+        return self._create_wrapper(endpoint)
 
     def _create_wrapper(self, endpoint: Callable):
         @wraps(endpoint)
         def wrapper(request, *args, **kwargs):
-            request.endpoint = endpoint
-            request.signature = EndpointSignature(endpoint)
+            request._arcstack_meta = ArcStackRequestMeta(endpoint, args, kwargs)
 
             try:
-                response = self._middleware_chain(request, *args, **kwargs)
+                response = self._middleware_chain(request)
             except Exception as e:
                 response = self._process_exception(e, request)
 
@@ -111,47 +99,30 @@ class ArcStackAPI:
 
         return wrapper
 
-    def _get_response(self, request, *args, **kwargs):
-        if not hasattr(request, 'endpoint'):
+    def _get_response(self, request):
+        if not hasattr(request, '_arcstack_meta'):
             raise ImproperlyConfigured(
-                'The request object must have an `endpoint` attribute. '
-                'To endpointize a view, use the `api` decorator or '
+                'The request object must have an `_arcstack_meta` attribute. '
+                'To endpointify a view, use the `api_endpoint` decorator or '
                 'subclass `Endpoint`.'
             )
 
-        response, endpoint_args, endpoint_kwargs = self._process_params(
-            request, *args, **kwargs
-        )
+        endpoint = request._arcstack_meta.endpoint
+        args = request._arcstack_meta.args
+        kwargs = request._arcstack_meta.kwargs
+        del request._arcstack_meta
 
-        if response is None:
-            response = request.endpoint(request, *endpoint_args, **endpoint_kwargs)
-
-        return response
-
-    def _process_params(self, request, *args, **kwargs):
-        """Process the parameters of the request through the middleware."""
         response = None
 
-        validation_errors = []
-        for middleware in self._param_middleware:
-            try:
-                args, kwargs = middleware(args, kwargs)
-            except ValidationError as e:
-                validation_errors.append(e)
-            except Exception as e:
-                response = self._process_exception(e, request)
+        for middleware in self._endpoint_middleware:
+            response = middleware(request, endpoint, *args, **kwargs)
+            if response is not None:
+                break
 
-        if validation_errors:
-            response = HttpResponse(
-                content=JsonSerializer.serialize(
-                    {
-                        'errors': [str(e) for e in validation_errors],
-                    }
-                ),
-                status=400,
-            )
+        if response is None:
+            response = endpoint(request, *args, **kwargs)
 
-        return response, args, kwargs
+        return response
 
     def _process_exception(
         self, exception: Exception, request: HttpRequest

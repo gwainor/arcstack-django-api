@@ -1,25 +1,25 @@
 from django.http import HttpRequest, HttpResponse
 
-from ..conf import settings
-from ..errors import APIError, UnauthorizedError
-from ..responses import JsonResponse, UnauthorizedResponse
-from ..serializers import JsonSerializer
-from .mixin import MiddlewareMixin
+from .conf import settings
+from .errors import APIError, InternalServerError, UnauthorizedError
+from .mixins import MiddlewareMixin
+from .responses import InternalServerErrorResponse, UnauthorizedResponse
+from .serializers import JsonSerializer
 
 
 class CommonMiddleware(MiddlewareMixin):
-    def process_request(self, request, *args, **kwargs):
-        endpoint = getattr(request, 'endpoint', None)
+    def process_request(self, request):
+        meta = getattr(request, '_arcstack_meta', None)
 
-        if endpoint is None:
+        if meta is None:
             # Not a valid request as an API endpoint
             return
 
-        self._check_login_required(request, endpoint)
+        self._check_login_required(request, meta.endpoint)
 
         return None
 
-    def process_response(self, request, response, *args, **kwargs):
+    def process_response(self, request, response):
         if isinstance(response, HttpResponse):
             # noop: The response is already an HttpResponse
             pass
@@ -30,10 +30,16 @@ class CommonMiddleware(MiddlewareMixin):
             or isinstance(response, bool)
         ):
             # Convert the response to a string and return it as an HttpResponse
-            response = HttpResponse(content=f'{response}')
+            response = HttpResponse(
+                content=f'{response}',
+                content_type='text/plain',
+            )
         elif JsonSerializer.is_json_serializable(response):
             data = JsonSerializer.serialize(response)
-            response = HttpResponse(content=data, content_type='application/json')
+            response = HttpResponse(
+                content=data,
+                content_type='application/json',
+            )
         else:
             raise ValueError(f'Unsupported response type: {type(response)}')
 
@@ -45,15 +51,12 @@ class CommonMiddleware(MiddlewareMixin):
         response = None
 
         if isinstance(exception, APIError):
-            response = JsonResponse(
-                {
-                    'error': exception.message,
-                    'status': exception.status_code,
-                },
-                status=exception.status_code,
-            )
+            response = self.process_response(request, exception.message)
+            response.status_code = exception.status_code
         elif isinstance(exception, UnauthorizedError):
             response = UnauthorizedResponse()
+        elif isinstance(exception, InternalServerError):
+            response = InternalServerErrorResponse()
 
         # Not an exception defined in the ArcStack API.
         # Let the other middleware handle it.

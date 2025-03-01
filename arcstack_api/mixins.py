@@ -13,15 +13,15 @@ class MiddlewareMixin:
         )
         return f'<{qualname} get_response={get_response_qualname}>'
 
-    def __call__(self, request, *args, **kwargs):
+    def __call__(self, request):
         response = None
 
         if hasattr(self, 'process_request'):
-            response = self.process_request(request, *args, **kwargs)
+            response = self.process_request(request)
 
-        response = response or self.get_response(request, *args, **kwargs)
+        response = response or self.get_response(request)
 
         if hasattr(self, 'process_response'):
-            response = self.process_response(request, response, *args, **kwargs)
+            response = self.process_response(request, response)
 
         return response

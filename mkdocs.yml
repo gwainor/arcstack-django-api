@@ -10,6 +10,11 @@ extra_css:
   - stylesheets/extra.css
 theme:
   name: material
+  features:
+    - navigation.tabs
+    - content.code.copy
+    - content.code.select
+    - content.code.annotate
   palette:
     - media: "(prefers-color-scheme)"
       primary: custom
@@ -28,3 +33,19 @@ theme:
       toggle:
         icon: material/weather-sunny
         name: Switch to light mode
+nav:
+  - Home:
+    - Introduction: index.md
+    - motivation.md
+    - roadmap.md
+  - Middleware:
+    - middleware/index.md
+    - Built-in middleware:
+      - middleware/common.md
+markdown_extensions:
+  - abbr
+  - codehilite
+  - admonition
+  - pymdownx.superfences
+  - pymdownx.tasklist:
+      custom_checkbox: true

@@ -9,3 +9,6 @@ test-cov:
 
 run-test-file:
     poetry run python test.py
+
+docs-serve:
+    poetry run mkdocs serve
