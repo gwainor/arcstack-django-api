@@ -3,17 +3,12 @@ name = "arcstack-django-api"
 dynamic = ["version"]
 description = "Create APIs in Django way"
 authors = [
-    {name = "Gokhan Ozturk",email = "me@gokhan.org.tr"}
+    {name = "Gokhan Ozturk", email = "me@gokhan.org.tr"}
 ]
 license = {text = "MIT"}
 readme = "README.md"
 requires-python = ">=3.10"
 keywords = ["api", "django", "rest", "framework", "api-framework", "class-based-views"]
-dependencies = [
-    "django (>=3.1,<6.0.0)",
-    "pydantic (>=2.10.6,<3.0.0)",
-    "django-appconf (>=1.1.0,<2.0.0)"
-]
 classifiers = [
     "Intended Audience :: Information Technology",
     "Intended Audience :: System Administrators",
@@ -42,7 +37,13 @@ classifiers = [
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Internet :: WWW/HTTP",
 ]
+dependencies = [
+    "django (>=3.1,<6.0.0)",
+    "django-appconf (>=1.1.0,<2.0.0)"
+]
 
+[project.optional-dependencies]
+pydantic = ["pydantic>=2.10.6,<3.0.0"]
 
 [project.urls]
 homepage = "https://gwainor.github.io/arcstack-django-api/"
@@ -62,7 +63,6 @@ packages = [
 ]
 exclude = ["tests", "docs"]
 version = "0.0.0"
-
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.9.6"
@@ -138,6 +138,8 @@ docstring-code-line-length = "dynamic"
 [tool.ruff.lint.isort]
 lines-after-imports = 2
 
+# -----------------------------------------------------------------------------
+# Testing stuff
 
 [tool.pytest.ini_options]
 testpaths = [
@@ -153,5 +155,7 @@ exclude_also = [
     # 3. A pragma comment that excludes an entire file:
     '\A(?s:.*# pragma: exclude file.*)\Z',
 ]
+
+
 [tool.poetry-dynamic-versioning]
 enable = true
